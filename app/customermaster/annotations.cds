@@ -3,8 +3,7 @@ annotate service.CustomerMaster with @(
     
     UI.SelectionFields:[
 
-        NAME1,
-        NAMEV,
+        FullName,
         CustomerNumber,
         TELF1
 
@@ -14,31 +13,23 @@ annotate service.CustomerMaster with @(
         {
             $Type : 'UI.DataField',
             Value : CustomerNumber,
+            Label: 'Customer Number'
         },
         {
             $Type : 'UI.DataField',
-            Value : ID,
-        },
-        {
-            $Type : 'UI.DataField',
-            Value : NAME1,
-        },
-        {
-            $Type : 'UI.DataField',
-            Value : NAMEV,
+            Value : FullName,
+            Label: 'Full Name'
         },
         {
             $Type : 'UI.DataField',
             Value : PARAU,
+            Label: 'Email Address'
         },
         {
             $Type : 'UI.DataField',
-            Value : Payer,
-        },
-        {
-            $Type : 'UI.DataField',
-            Value : SORTL,
-        },
+            Value : TELF1,
+            Label: 'Telephone'
+        }
      ],
      UI.HeaderInfo:{
         TypeName: 'Customer Master',
@@ -52,53 +43,84 @@ annotate service.CustomerMaster with @(
             Facets : [
                 {
                     $Type : 'UI.ReferenceFacet',
-                    Label: 'Order Details',
+                    Label: 'Ship to Address',
                     Target : '@UI.Identification'
                 },
                 {
                     $Type : 'UI.ReferenceFacet',
-                    Label: 'Configuration Details',
+                    Label: 'Bill to address',
                     Target : '@UI.FieldGroup#Spiderman'
                 },
             ],
         },
+        {
+            $Type : 'UI.ReferenceFacet',
+            Label: 'Ship to Address',
+            Target : 'Shipto/@UI.LineItem',
+        },
+        {
+            $Type : 'UI.ReferenceFacet',
+            Label: 'Bill to Address',
+            Target : 'Billto/@UI.LineItem',
+        }
         
     ],
     UI.Identification:[
         {
             $Type : 'UI.DataField',
-            Value : CustomerNumber,
+            Value : Shipto.customer_ID,
+            Label: 'Customer ID'
         },
         {
             $Type : 'UI.DataField',
-            Value : ID,
-        },
-        {
-            $Type : 'UI.DataField',
-            Value : NAME1,
-        },
+            Value : Shipto.ShiptoNr,
+            Label: 'Ship to Number'
+        }
     ],
     UI.FieldGroup #Spiderman: {
-        Label : 'PO pricing',
         Data : [
             {
                 $Type : 'UI.DataField',
-                Value : NAMEV,
+                Value : Billto.customer_ID,
+                Label: 'Customer ID'
             },
             {
                 $Type : 'UI.DataField',
-                Value : PARNR,
-            },
-            {
-                $Type : 'UI.DataField',
-                Value : SORTL,
-            },
-            {
-                $Type : 'UI.DataField',
-                Value : TELF1,
-            },
+                Value : Billto.BilltoNr,
+                Label: 'Bill to Number'
+            }
         ],
 
     },
 );
 
+
+annotate service.BilltoAddress with @(
+ 
+    UI.LineItem:[
+        {
+            $Type : 'UI.DataField',
+            Value : customer_ID,
+
+        },
+        {
+            $Type : 'UI.DataField',
+            Value : BilltoNr,
+
+        }
+    ]);
+
+annotate service.ShiptoAddress with @(
+ 
+    UI.LineItem:[
+        {
+            $Type : 'UI.DataField',
+            Value : customer_ID,
+
+        },
+        {
+            $Type : 'UI.DataField',
+            Value : ShiptoNr,
+
+        }
+    ]);

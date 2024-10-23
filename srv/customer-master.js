@@ -7,63 +7,113 @@ module.exports = async function () {
     this.on('addCustomer', async (req) => {
         const { ID, CustomerNumber, Soldto, Shipto, Billto, Payer, PARNR, PARAU, NAMEV, NAME1, TELF1, SORTL } = req.data;
 
-        // Validate required fields
-        if (!CustomerNumber || !Soldto || !Payer) {
-            return { success: false, message: 'Missing required fields' };
-        }
 
         try {
-            // Create the customer in the CustomerMaster table
-            const newCustomer = await cds.run(INSERT.into(CustomerMaster).entries({
-                ID: ID || cds.utils.uuid(),  // Use provided ID or generate a new one
-                CustomerNumber,
-                Soldto,
-                Payer,
-                PARNR,
-                PARAU,
-                NAMEV,
-                NAME1,
-                TELF1,
-                SORTL
-            }));
 
-            // Handle Shipto addresses
-            if (Shipto && Shipto.length > 0) {
-                const shiptoEntries = Shipto.map(shipto => ({
-                    CustomerID: newCustomer.ID,  // Foreign key for composition
-                    ShiptoNr: shipto.ShiptoNr
-                }));
-                await cds.run(INSERT.into(ShiptoAddress).entries(shiptoEntries));
-            }
 
-            // Handle Billto addresses
-            if (Billto && Billto.length > 0) {
-                const billtoEntries = Billto.map(billto => ({
-                    CustomerID: newCustomer.ID,  // Foreign key for composition
-                    BilltoNr: billto.BilltoNr
-                }));
-                await cds.run(INSERT.into(BilltoAddress).entries(billtoEntries));
-            }
+            // Check if the record exists
+            let query = SELECT.from(CustomerMaster, b => { b.CustomerNumber, b.NAME1 }).where({ CustomerNumber: CustomerNumber });
+            let books = await cds.run(query)
+            console.log(books.length)
 
-            // Return success response with the created customer details
-            return {
-                success: true,
-                message: 'Customer successfully added',
-                customer: {
-                    ID: newCustomer.ID,
-                    CustomerNumber,
-                    Soldto,
-                    Shipto: Shipto.map(shipto => ({ ShiptoNr: shipto.ShiptoNr })),
-                    Billto: Billto.map(billto => ({ BilltoNr: billto.BilltoNr })),
-                    Payer,
-                    PARNR,
-                    PARAU,
-                    NAMEV,
-                    NAME1,
-                    TELF1,
-                    SORTL
+            // if record not exists insert new record 
+            if (books.length === 0) {
+
+                // Validate required fields
+                if (!CustomerNumber || !Soldto || !Payer) {
+                    return { success: false, message: 'Missing required fields' };
                 }
-            };
+
+                const newCustomer = await cds.run(INSERT.into(CustomerMaster).entries({
+                    ID: ID || cds.utils.uuid(),
+                    CustomerNumber: CustomerNumber,
+                    Soldto: Soldto,
+                    Payer: Payer,
+                    PARNR: PARNR,
+                    PARAU: PARAU,
+                    NAMEV: NAMEV,
+                    NAME1: NAME1,
+                    TELF1: TELF1,
+                    SORTL: SORTL
+
+                }));
+
+                // Handle Shipto addresses
+                if (Shipto && Shipto.length > 0) {
+                    const shiptoEntries = Shipto.map(shipto => ({
+                        customer_ID: ID,
+                        ShiptoNr: shipto.ShiptoNr
+                    }));
+                    await cds.run(INSERT.into(ShiptoAddress).entries(shiptoEntries));
+                }
+
+                // Handle Billto addresses
+                if (Billto && Billto.length > 0) {
+                    const billtoEntries = Billto.map(billto => ({
+                        customer_ID: ID, // Foreign key for composition
+                        BilltoNr: billto.BilltoNr
+                    }));
+                    await cds.run(INSERT.into(BilltoAddress).entries(billtoEntries));
+                }
+
+
+                // Return success response with the created customer details
+                return {
+                    success: true,
+                    message: 'Customer successfully added',
+                    customer: {
+                        ID: newCustomer.ID,
+                        CustomerNumber,
+                        Soldto,
+                        Shipto: Shipto.map(shipto => ({ ShiptoNr: shipto.ShiptoNr })),
+                        Billto: Billto.map(billto => ({ BilltoNr: billto.BilltoNr })),
+                        Payer,
+                        PARNR,
+                        PARAU,
+                        NAMEV,
+                        NAME1,
+                        TELF1,
+                        SORTL
+                    }
+                };
+
+                // else update the record with new data    
+            } else {
+
+                let updateData = {};
+                if (Soldto) updateData.Soldto = Soldto;
+                if (Payer) updateData.Payer = Payer;
+                if (PARNR) updateData.PARNR = PARNR;
+                if (PARAU) updateData.PARAU = PARAU;
+                if (NAMEV) updateData.NAMEV = NAMEV;
+                if (NAME1) updateData.NAME1 = NAME1;
+                if (TELF1) updateData.TELF1 = TELF1;
+                if (SORTL) updateData.SORTL = SORTL;
+
+                // Perform the update only for fields that are non-null
+                await cds.run(UPDATE(CustomerMaster).set(updateData).where({ CustomerNumber: CustomerNumber }));
+
+                return {
+                    success: true,
+                    message: 'customer updated successfully',
+                    customer: {
+                        CustomerNumber,
+                        Soldto,
+                        Shipto: Shipto.map(shipto => ({ ShiptoNr: shipto.ShiptoNr })),
+                        Billto: Billto.map(billto => ({ BilltoNr: billto.BilltoNr })),
+                        Payer,
+                        PARNR,
+                        PARAU,
+                        NAMEV,
+                        NAME1,
+                        TELF1,
+                        SORTL
+                    }
+                };
+
+
+            }
+
         } catch (error) {
             console.error('Error adding customer:', error);
             return { success: false, message: 'Error adding customer' };

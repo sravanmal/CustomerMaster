@@ -23,6 +23,11 @@ entity CustomerMaster : managed, cuid {
   TELF1          : String(16);
   PARAU          : String(40) @mandatory;
   SORTL          : String(10);
+  // @UI.Hidden // hide the field from UI form if needed
+  // virtual FullName   : String ;
+  FullName   : String = NAME1 || ' ' || NAMEV;
+
+  
 }
 
 entity ShiptoAddress : cuid {
