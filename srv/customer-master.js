@@ -1,122 +1,92 @@
-const cds = require('@sap/cds');
+// version 2
 
-module.exports = async function () {
+module.exports = function () {
+
     const { CustomerMaster, ShiptoAddress, BilltoAddress } = this.entities;
 
-    // Define the 'addCustomer' action
-    this.on('addCustomer', async (req) => {
+    // custom logic for action button addCustomer 
+    this.on('addCustomer', async (req, res) => {
+
         const { ID, CustomerNumber, Soldto, Shipto, Billto, Payer, PARNR, PARAU, NAMEV, NAME1, TELF1, SORTL } = req.data;
+        const data = req.data;
+        const response = (message) => {
+            return {
+                success: true,
+                message: `Customer ${CustomerNumber} has been ${message}`,
+                customer: {
+                    ID,
+                    CustomerNumber,
+                    Soldto,
+                    Shipto: Shipto.map(shipto => ({ ShiptoNr: shipto.ShiptoNr })),
+                    Billto: Billto.map(billto => ({ BilltoNr: billto.BilltoNr })),
+                    Payer,
+                    PARNR,
+                    PARAU,
+                    NAMEV,
+                    NAME1,
+                    TELF1,
+                    SORTL
+                }
+            };
+        }
 
 
         try {
 
 
-            // Check if the record exists
-            let query = SELECT.from(CustomerMaster, b => { b.CustomerNumber, b.NAME1 }).where({ CustomerNumber: CustomerNumber });
-            let books = await cds.run(query)
-            console.log(books.length)
+            // IF-ELSE STATEMENT FOR VALIDATING THE DATA 
+            if (Object.keys(data).length != 0) {
 
-            // if record not exists insert new record 
-            if (books.length === 0) {
+                //validating input fields if blank fields it should return error
 
-                // Validate required fields
-                if (!CustomerNumber || !Soldto || !Payer) {
-                    return { success: false, message: 'Missing required fields' };
-                }
+                //storing blank fields in nullKeys array
+                const nullKeys = [];
 
-                const newCustomer = await cds.run(INSERT.into(CustomerMaster).entries({
-                    ID: ID || cds.utils.uuid(),
-                    CustomerNumber: CustomerNumber,
-                    Soldto: Soldto,
-                    Payer: Payer,
-                    PARNR: PARNR,
-                    PARAU: PARAU,
-                    NAMEV: NAMEV,
-                    NAME1: NAME1,
-                    TELF1: TELF1,
-                    SORTL: SORTL
-
-                }));
-
-                // Handle Shipto addresses
-                if (Shipto && Shipto.length > 0) {
-                    const shiptoEntries = Shipto.map(shipto => ({
-                        customer_ID: ID,
-                        ShiptoNr: shipto.ShiptoNr
-                    }));
-                    await cds.run(INSERT.into(ShiptoAddress).entries(shiptoEntries));
-                }
-
-                // Handle Billto addresses
-                if (Billto && Billto.length > 0) {
-                    const billtoEntries = Billto.map(billto => ({
-                        customer_ID: ID, // Foreign key for composition
-                        BilltoNr: billto.BilltoNr
-                    }));
-                    await cds.run(INSERT.into(BilltoAddress).entries(billtoEntries));
-                }
-
-
-                // Return success response with the created customer details
-                return {
-                    success: true,
-                    message: 'Customer successfully added',
-                    customer: {
-                        ID: newCustomer.ID,
-                        CustomerNumber,
-                        Soldto,
-                        Shipto: Shipto.map(shipto => ({ ShiptoNr: shipto.ShiptoNr })),
-                        Billto: Billto.map(billto => ({ BilltoNr: billto.BilltoNr })),
-                        Payer,
-                        PARNR,
-                        PARAU,
-                        NAMEV,
-                        NAME1,
-                        TELF1,
-                        SORTL
+                for (const key in data) {
+                    if (data[key] === "") {
+                        nullKeys.push(key);
+                        console.log(nullKeys)
                     }
-                };
+                }
 
-                // else update the record with new data    
+
+
+                // returning error if blank fields are present 
+
+                if (nullKeys.length > 0) {
+                    console.log(`${nullKeys.join(" and ")} ${nullKeys.length > 1 ? 'are' : 'is'} missing.`);
+                    req.error(400, `${nullKeys.join(" and ")} ${nullKeys.length > 1 ? 'are' : 'is'} missing.`);
+                } else {
+                    console.log("No fields are missing.");
+                    //check if customer present in the database 
+                    const CustomerRecord = await SELECT.one.from(CustomerMaster).where({ CustomerNumber })
+                    console.log(CustomerRecord);
+
+                    //CREATED AND UPDATE IF ELSE STATEMENT 
+                    if (!CustomerRecord) {
+
+                        await INSERT.into(CustomerMaster).entries(data)
+                        req.reply(response("created"));
+
+                    }
+                    else {
+                        await this.update(CustomerMaster).set(data).where({ CustomerNumber })
+                        req.reply(response("updated"));
+                    }
+                }
+
+
             } else {
-
-                let updateData = {};
-                if (Soldto) updateData.Soldto = Soldto;
-                if (Payer) updateData.Payer = Payer;
-                if (PARNR) updateData.PARNR = PARNR;
-                if (PARAU) updateData.PARAU = PARAU;
-                if (NAMEV) updateData.NAMEV = NAMEV;
-                if (NAME1) updateData.NAME1 = NAME1;
-                if (TELF1) updateData.TELF1 = TELF1;
-                if (SORTL) updateData.SORTL = SORTL;
-
-                // Perform the update only for fields that are non-null
-                await cds.run(UPDATE(CustomerMaster).set(updateData).where({ CustomerNumber: CustomerNumber }));
-
-                return {
-                    success: true,
-                    message: 'customer updated successfully',
-                    customer: {
-                        CustomerNumber,
-                        Soldto,
-                        Shipto: Shipto.map(shipto => ({ ShiptoNr: shipto.ShiptoNr })),
-                        Billto: Billto.map(billto => ({ BilltoNr: billto.BilltoNr })),
-                        Payer,
-                        PARNR,
-                        PARAU,
-                        NAMEV,
-                        NAME1,
-                        TELF1,
-                        SORTL
-                    }
-                };
-
-
+                req.error(400, "no input body")
             }
 
+
         } catch (error) {
-            console.error('Error adding customer:', error);
             return { success: false, message: 'Error adding customer' };
+
         }
+
+
+
     });
-};
+}

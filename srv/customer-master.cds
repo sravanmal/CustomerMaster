@@ -4,17 +4,19 @@ using from '@cap-js/change-tracking';
 
 service CustomerMasterService {
 
-    entity CustomerMaster as projection on my.CustomerMaster ;
-    // entity ChangeLog as projection on myy.ChangeLog; 
+    entity CustomerMaster as projection on my.CustomerMaster;
+    // entity ChangeLog as projection on myy.ChangeLog;
+
+    // action button for create or updating the customermaster entity
     action addCustomer(ID : UUID,
                        CustomerNumber : String,
                        Soldto : String,
                        Shipto : many {
-                            ShiptoNr : String;
-                        },
+        ShiptoNr : String;
+    },
                        Billto : many {
-                            BilltoNr : String;
-                        },
+        BilltoNr : String;
+    },
                        Payer : String,
                        PARNR : Integer,
                        PARAU : String,
@@ -22,10 +24,11 @@ service CustomerMasterService {
                        NAME1 : String(35),
                        TELF1 : String(16),
                        SORTL : String(10))
-                        returns {
-            success : Boolean;
-            message : String;
-            customer : {
+
+    returns {
+        success : Boolean;
+        message : String;
+        customer : {
             ID : UUID;
             CustomerNumber : String;
             Soldto : String;
@@ -43,8 +46,8 @@ service CustomerMasterService {
             TELF1 : String;
             SORTL : String;
         }
-}}
-
+    }
+}
 
 
 // annotate my.CustomerMaster with @changelog: [
@@ -62,4 +65,3 @@ service CustomerMasterService {
 //     PARAU  @changelog;
 //     SORTL  @changelog
 // };
-
